@@ -19,11 +19,14 @@ BUG_REPORT_URL="https://github.com/zalonic/silver-enigma/issues/new"
 
 echo "Configuring os-release branding..."
 
+# Custom Image Builder needed for the below to be added.
+# s#^ID=.*#ID="${ID}"#
+# s#^ID_LIKE=.*#ID_LIKE="${ID_LIKE}"#
+
 sed -i -f - /usr/lib/os-release <<EOF
 s#^NAME=.*#NAME="${NAME}"#
 s#^VERSION=.*#VERSION="${VERSION}"#
-s#^ID=.*#ID="${ID}"#
-s#^ID_LIKE=.*#ID_LIKE="${ID_LIKE}"#
+
 s#^VERSION_ID=.*#VERSION_ID="${VERSION_ID}"#
 s#^PLATFORM_ID=.*#PLATFORM_ID="${PLATFORM_ID}"#
 s#^PRETTY_NAME=.*#PRETTY_NAME="${PRETTY_NAME}"#
