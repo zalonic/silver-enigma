@@ -45,7 +45,7 @@ dnf versionlock add glib2 fontconfig
 # Swap to CachyOS Kernel
 dnf config-manager --add-repo https://copr.fedorainfracloud.org/coprs/bieszczaders/kernel-cachyos/repo/epel-10-x86_64/bmanojlovic-cachyos-epel-10-x86_64.repo
 dnf -y install kernel-cachyos kernel-cachyos-devel kernel-cachyos-modules kernel-cachyos-modules-extra
-dnf -y remove kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
+dnf -y remove kernel kernel-core kernel-modules kernel-modules-core
 
 dnf -y install "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${MAJOR_VERSION_NUMBER}.noarch.rpm"
 dnf config-manager --set-enabled crb
