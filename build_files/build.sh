@@ -1,24 +1,25 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -ouex pipefail
+set -eo pipefail
 
-### Install packages
+SCRIPTS_PATH="$(realpath "$(dirname "$0")")"
+MAJOR_VERSION_NUMBER="$(sh -c '. /usr/lib/os-release ; echo ${VERSION_ID%.*}')"
+SCRIPTS_PATH="$(realpath "$(dirname "$0")/scripts")"
+export SCRIPTS_PATH
+export MAJOR_VERSION_NUMBER
 
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
+printf "::group:: ===Image Base===\n"
+"${SCRIPTS_PATH}/01-base.sh"
+printf "::endgroup::\n"
 
-# this installs a package from fedora repos
-dnf5 install -y tmux 
+printf "::group:: ===Install CachyKernel===\n"
+"${SCRIPTS_PATH}/02-cachy-kernel.sh"
+printf "::endgroup::\n"
 
-# Use a COPR Example:
-#
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
+printf "::group:: ===OS Release===\n"
+"${SCRIPTS_PATH}/update-os-release.sh"
+printf "::endgroup::\n"
 
-#### Example for enabling a System Unit File
-
-systemctl enable podman.socket
+printf "::group:: ===Image Cleanup===\n"
+"${SCRIPTS_PATH}/cleanup.sh"
+printf "::endgroup::\n"

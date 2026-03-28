@@ -1,0 +1,109 @@
+# This is a WIP as build-dev.yml still being updated
+name: Production Release
+on:
+  schedule:
+    - cron: '10 10 * * *'
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  IMAGE_NAME: "${{ github.event.repository.name }}"
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
+jobs:
+  build-release:
+    name: Build and Push Release Image
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@v7
+
+      - name: Determine Version and Tags
+        id: meta
+        run: |
+          DATE=$(date +%y%m%d)
+          TIMESTAMP=$(date +%H%M%S)
+          
+          VERSION=${GITHUB_REF_NAME}
+          if [[ ! $VERSION =~ ^v[0-9] ]]; then
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          fi
+          
+          CLEAN_VERSION=$(echo $VERSION | sed 's/^v//')
+          OS_VERSION_VAL="${CLEAN_VERSION}.${DATE}.${TIMESTAMP}"
+          TAG_LIST="latest ${VERSION} ${OS_VERSION_VAL}"
+          
+          echo "version=${OS_VERSION_VAL}" >> $GITHUB_OUTPUT
+          echo "tags=${TAG_LIST}" >> $GITHUB_OUTPUT
+          echo "SUMMARY_TAGS=${TAG_LIST}" >> $GITHUB_ENV
+
+      - name: Build Image (Latest)
+        uses: redhat-actions/buildah-build@v2
+        id: build
+        with:
+          containerfiles: ./Containerfile
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            OS_VERSION=${{ steps.meta.outputs.version }}
+          oci: false
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Release to GHCR
+        uses: redhat-actions/push-to-registry@v2
+        id: push
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ steps.meta.outputs.tags }}
+      
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          echo "## 🚀 Production Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Image Name:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️ **Tags Pushed:**" >> $GITHUB_STEP_SUMMARY
+          for tag in ${{ env.SUMMARY_TAGS }}; do
+            echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+  sign-release:
+    name: Sign Release Image
+    runs-on: ubuntu-24.04
+    needs: build-release
+    if: needs.build-release.outputs.digest != ''
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.1
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign Release Image
+        run: |
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-release.outputs.digest }}"
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}

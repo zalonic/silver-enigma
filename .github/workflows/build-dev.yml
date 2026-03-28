@@ -1,0 +1,126 @@
+name: Development Build
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore: ['**/README.md']
+
+env:
+  IMAGE_NAME: "${{ github.event.repository.name }}"
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
+concurrency:
+  group: dev-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-dev:
+    name: Build and Push Dev Image
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@v7
+
+      - name: Determine Dev Version and Tags
+        id: meta
+        run: |
+          DATE=$(date +%y%m%d)
+          TIMESTAMP=$(date +%H%M%S)
+          
+          CLEAN_VERSION="development"
+          BUILD_VERSION="${CLEAN_VERSION}.${DATE}.${TIMESTAMP}"
+          TAG_LIST="${CLEAN_VERSION} ${BUILD_VERSION}"
+          
+          echo "clean_version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "build_version=${BUILD_VERSION}" >> $GITHUB_OUTPUT
+          echo "tags=${TAG_LIST}" >> $GITHUB_OUTPUT
+
+          echo "SUMMARY_VERSION=${BUILD_VERSION}" >> $GITHUB_ENV
+          echo "SUMMARY_TAGS=${TAG_LIST}" >> $GITHUB_ENV
+
+      - name: Build Image (Dev)
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: ./Containerfile
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            CLEAN_VERSION=${{ steps.meta.outputs.clean_version }}
+            BUILD_VERSION=${{ steps.meta.outputs.build_version }}
+          oci: false
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Dev to GHCR
+        uses: redhat-actions/push-to-registry@v2
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        id: push
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Generate Dev Build Summary
+        if: always()
+        run: |
+          echo "## 🛠️ Dev Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "🔍 **Internal Dev Version:** \`${{ env.SUMMARY_VERSION }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Image Name:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "🏷️ **Tags Pushed:**" >> $GITHUB_STEP_SUMMARY
+          for tag in ${{ env.SUMMARY_TAGS }}; do
+            echo "- \`$tag\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+  sign-dev:
+    name: Sign Dev Image
+    runs-on: ubuntu-24.04
+    needs: build-dev
+    if: github.event_name != 'pull_request' && needs.build-dev.outputs.digest != ''
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.1
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign Dev Image
+        run: |
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-dev.outputs.digest }}"
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+
+  release-check:
+    name: Release Please
+    runs-on: ubuntu-24.04
+    needs: build-dev
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple

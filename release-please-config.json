@@ -1,0 +1,20 @@
+{
+  "release-type": "simple",
+  "separate-pull-requests": true,
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "my-container-image",
+      "initial-version": "0.1.0",
+      "changelog-sections": [
+        { "type": "feat", "section": "🚀 Features", "hidden": false },
+        { "type": "fix", "section": "🐛 Bug Fixes", "hidden": false },
+        { "type": "chore", "section": "⚙️ Maintenance", "hidden": false },
+        { "type": "docs", "section": "📚 Documentation", "hidden": false },
+        { "type": "perf", "section": "⚡ Performance Improvements", "hidden": false },
+        { "type": "refactor", "section": "♻️ Code Refactoring", "hidden": false },
+        { "type": "ci", "section": "🤖 CI/CD Changes", "hidden": true }
+      ]
+    }
+  }
+}
