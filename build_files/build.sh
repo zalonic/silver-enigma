@@ -13,7 +13,7 @@ printf "::group:: ===Image Base===\n"
 printf "::endgroup::\n"
 
 printf "::group:: ===Install CachyKernel===\n"
-"${SCRIPTS_PATH}/02-cachy-kernel.sh"
+# "${SCRIPTS_PATH}/02-cachy-kernel.sh"
 printf "::endgroup::\n"
 
 printf "::group:: ===OS Release===\n"
