@@ -40,7 +40,12 @@ fi
 dnf versionlock add glib2 fontconfig
 
 # This fixes a lot of skew issues on GDX because kernel-devel wont update then
-dnf versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra kernel-uki-virt
+# dnf versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra kernel-uki-virt
+
+# Swap to CachyOS Kernel
+dnf config-manager --add-repo https://copr.fedorainfracloud.org/coprs/bmanojlovic/cachyos/repo/centos-stream-10/bmanojlovic-cachyos-centos-stream-10.repo
+dnf -y install kernel-cachyos kernel-cachyos-devel kernel-cachyos-modules kernel-cachyos-modules-extra
+dnf -y remove kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
 dnf -y install "https://dl.fedoraproject.org/pub/epel/epel-release-latest-${MAJOR_VERSION_NUMBER}.noarch.rpm"
 dnf config-manager --set-enabled crb
