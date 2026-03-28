@@ -43,7 +43,7 @@ dnf versionlock add glib2 fontconfig
 # dnf versionlock add kernel kernel-devel kernel-devel-matched kernel-core kernel-modules kernel-modules-core kernel-modules-extra kernel-uki-virt
 
 # Swap to CachyOS Kernel
-dnf config-manager --add-repo https://copr.fedorainfracloud.org/coprs/bmanojlovic/cachyos/repo/centos-stream-10/bmanojlovic-cachyos-centos-stream-10.repo
+dnf config-manager --add-repo https://copr.fedorainfracloud.org/coprs/bieszczaders/kernel-cachyos/repo/epel-10-x86_64/bmanojlovic-cachyos-epel-10-x86_64.repo
 dnf -y install kernel-cachyos kernel-cachyos-devel kernel-cachyos-modules kernel-cachyos-modules-extra
 dnf -y remove kernel kernel-core kernel-modules kernel-modules-core kernel-modules-extra
 
