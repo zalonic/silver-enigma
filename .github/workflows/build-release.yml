@@ -1,12 +1,12 @@
 # This is a WIP as build-dev.yml still being updated
 name: Production Release
 on:
-  schedule:
-    - cron: '10 10 * * *'
+#  schedule:
+#    - cron: '10 10 * * *'
+#  push:
+#    tags:
+#      - 'v*'
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 env:
   IMAGE_NAME: "${{ github.event.repository.name }}"
