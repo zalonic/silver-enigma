@@ -12,8 +12,8 @@ printf "::group:: ===Image Base===\n"
 "${SCRIPTS_PATH}/01-base.sh"
 printf "::endgroup::\n"
 
-printf "::group:: ===Install CachyKernel===\n"
-# "${SCRIPTS_PATH}/02-cachy-kernel.sh"
+printf "::group:: ===Install VPN Packages===\n"
+"${SCRIPTS_PATH}/vpn.sh"
 printf "::endgroup::\n"
 
 printf "::group:: ===OS Release===\n"
